@@ -1,0 +1,122 @@
+import type { Workspace } from '../domain/model'
+
+// Dados integralmente fictícios; nenhuma conexão com o Instagram nesta etapa.
+export function createDemo(): Workspace {
+  return {
+    version: 1,
+    products: [
+      { id: 'linen', name: 'Camisa Linho', collection: 'Essenciais', color: '#d8c5a8' },
+      { id: 'dress', name: 'Vestido Aurora', collection: 'Dias de sol', color: '#a5b59a' },
+      { id: 'bag', name: 'Bolsa Alma', collection: 'Essenciais', color: '#bd7c58' },
+    ],
+    posts: [
+      { id: 'post-1', title: 'O linho que acompanha seus dias', productId: 'linen', kind: 'Reel' },
+      {
+        id: 'post-2',
+        title: 'Um vestido, muitas possibilidades',
+        productId: 'dress',
+        kind: 'Carrossel',
+      },
+      { id: 'post-3', title: 'Seu novo essencial', productId: 'bag', kind: 'Foto' },
+      { id: 'post-4', title: 'Detalhes da nova coleção', productId: null, kind: 'Reel' },
+    ],
+    comments: [
+      {
+        id: 'c1',
+        postId: 'post-1',
+        author: 'marina.exemplo',
+        text: 'Essa camisa vai voltar no tamanho G? Estou esperando!',
+        intent: 'restock',
+        resolved: false,
+      },
+      {
+        id: 'c2',
+        postId: 'post-2',
+        author: 'bia.exemplo',
+        text: 'Vocês pretendem fazer esse vestido na cor preta?',
+        intent: 'variation',
+        resolved: false,
+      },
+      {
+        id: 'c3',
+        postId: 'post-1',
+        author: 'lucas.exemplo',
+        text: 'Quero uma M! Tem previsão de reposição?',
+        intent: 'restock',
+        resolved: false,
+      },
+      {
+        id: 'c4',
+        postId: 'post-3',
+        author: 'ana.exemplo',
+        text: 'Entregam em Recife? Quanto tempo demora?',
+        intent: 'shipping',
+        resolved: false,
+      },
+      {
+        id: 'c5',
+        postId: 'post-1',
+        author: 'luiza.exemplo',
+        text: 'Seria perfeita em azul-marinho também.',
+        intent: 'variation',
+        resolved: false,
+      },
+      {
+        id: 'c6',
+        postId: 'post-2',
+        author: 'carol.exemplo',
+        text: 'Qual o valor desse vestido?',
+        intent: 'price',
+        resolved: true,
+      },
+      {
+        id: 'c7',
+        postId: 'post-3',
+        author: 'joao.exemplo',
+        text: 'A bolsa caramelo volta quando?',
+        intent: 'unclassified',
+        resolved: false,
+      },
+      {
+        id: 'c8',
+        postId: 'post-2',
+        author: 'julia.exemplo',
+        text: 'Vai ter tamanho GG? Amei o modelo!',
+        intent: 'unclassified',
+        resolved: false,
+      },
+      {
+        id: 'c9',
+        postId: 'post-4',
+        author: 'pedro.exemplo',
+        text: 'Qual é o tecido dessa peça?',
+        intent: 'unclassified',
+        resolved: false,
+      },
+      {
+        id: 'c10',
+        postId: 'post-1',
+        author: 'sofia.exemplo',
+        text: 'Me avisem quando a camisa P voltar, por favor.',
+        intent: 'restock',
+        resolved: false,
+      },
+      {
+        id: 'c11',
+        postId: 'post-2',
+        author: 'alice.exemplo',
+        text: 'O vestido verde vai voltar?',
+        intent: 'restock',
+        resolved: false,
+      },
+      {
+        id: 'c12',
+        postId: 'post-3',
+        author: 'lara.exemplo',
+        text: 'A minha chegou e gostei muito do acabamento!',
+        intent: 'other',
+        resolved: true,
+      },
+    ],
+  }
+}
