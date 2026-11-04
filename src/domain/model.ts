@@ -18,19 +18,19 @@ export const intentSchema = z.enum([
 ])
 export type Intent = z.infer<typeof intentSchema>
 
-const productSchema = z.object({
+export const productSchema = z.object({
   id: z.string(),
   name: z.string(),
   collection: z.string(),
   color: z.string(),
 })
-const postSchema = z.object({
+export const postSchema = z.object({
   id: z.string(),
   title: z.string(),
   productId: z.string().nullable(),
   kind: z.enum(['Reel', 'Carrossel', 'Foto']),
 })
-const commentSchema = z.object({
+export const commentSchema = z.object({
   id: z.string(),
   postId: z.string(),
   author: z.string(),

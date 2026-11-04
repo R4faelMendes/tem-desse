@@ -8,11 +8,16 @@
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "preview": "vite preview",
-    "test": "vitest run",
+    "test": "npm run test:web && npm run test:api",
     "test:watch": "vitest",
     "typecheck": "tsc -b --pretty false",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "test:api": "vitest run --config server/vitest.config.ts",
+    "api:start": "node --env-file-if-exists=.env --import tsx server/src/index.ts",
+    "api:seed": "node --env-file-if-exists=.env --import tsx server/src/seed.ts",
+    "test:web": "vitest run",
+    "api:dev": "node --env-file-if-exists=.env --import tsx --watch server/src/index.ts"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",
@@ -20,6 +25,7 @@
     "@fontsource/inter": "^5.3.0",
     "@mui/icons-material": "^9.5.0",
     "@mui/material": "^9.5.0",
+    "fastify": "^5.12.7",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
     "zod": "^4.6.7"
@@ -35,11 +41,12 @@
     "jsdom": "^29.1.1",
     "oxlint": "^1.89.0",
     "prettier": "^3.9.10",
+    "tsx": "^4.23.15",
     "typescript": "~7.0.2",
     "vite": "^8.3.5",
     "vitest": "^5.0.5"
   },
   "engines": {
-    "node": ">=22.12.0"
+    "node": ">=22.17.0"
   }
 }

@@ -11,6 +11,7 @@ import {
   Stack,
   TextField,
   Typography,
+  Alert,
 } from '@mui/material'
 import { intentLabels, type Comment, type Intent } from '../domain/model'
 
@@ -18,18 +19,29 @@ export function CommentEditor({
   comment,
   onClose,
   onSave,
+  saving = false,
+  error,
 }: {
   comment: Comment
   onClose: () => void
   onSave: (intent: Intent, resolved: boolean) => void
+  saving?: boolean
+  error?: string | null
 }) {
   const [intent, setIntent] = useState(comment.intent)
   const [resolved, setResolved] = useState(comment.resolved)
   return (
-    <Dialog open onClose={onClose} fullWidth maxWidth="sm" aria-labelledby="classification-title">
+    <Dialog
+      open
+      onClose={saving ? undefined : onClose}
+      fullWidth
+      maxWidth="sm"
+      aria-labelledby="classification-title"
+    >
       <DialogTitle id="classification-title">Classificar comentário</DialogTitle>
       <DialogContent>
         <Stack spacing={3} sx={{ pt: 1 }}>
+          {error && <Alert severity="error">{error}</Alert>}
           <div>
             <Typography variant="caption" color="text.secondary">
               @{comment.author}
@@ -42,6 +54,7 @@ export function CommentEditor({
             value={intent}
             onChange={(event) => setIntent(event.target.value as Intent)}
             fullWidth
+            disabled={saving}
           >
             {Object.entries(intentLabels).map(([value, label]) => (
               <MenuItem key={value} value={value}>
@@ -53,6 +66,7 @@ export function CommentEditor({
             control={
               <Checkbox
                 checked={resolved}
+                disabled={saving}
                 onChange={(event) => setResolved(event.target.checked)}
               />
             }
@@ -64,9 +78,11 @@ export function CommentEditor({
         </Stack>
       </DialogContent>
       <DialogActions sx={{ px: 3, pb: 3 }}>
-        <Button onClick={onClose}>Cancelar</Button>
-        <Button variant="contained" onClick={() => onSave(intent, resolved)}>
-          Salvar classificação
+        <Button onClick={onClose} disabled={saving}>
+          Cancelar
+        </Button>
+        <Button variant="contained" disabled={saving} onClick={() => onSave(intent, resolved)}>
+          {saving ? 'Salvando…' : 'Salvar classificação'}
         </Button>
       </DialogActions>
     </Dialog>

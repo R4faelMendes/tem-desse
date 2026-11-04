@@ -1,4 +1,4 @@
-# Arquitetura da primeira entrega
+# Arquitetura em desenvolvimento
 
 ## Objetivo e recorte
 
@@ -12,6 +12,7 @@ Validar um fluxo completo e pequeno: publicação associada a produto → coment
 - Zod para validar o snapshot persistido.
 - Vitest, Testing Library e jsdom para testes.
 - Prettier para formatação e GitHub Actions para validação.
+- Fastify para a API REST e SQLite nativo do Node para persistência do backend.
 
 ## Modelo de domínio
 
@@ -35,9 +36,27 @@ A chave é `tem-desse:workspace:v1`. Não há escrita automática na montagem do
 
 Falhas de armazenamento mantêm a aplicação utilizável em memória e exibem um aviso. O armazenamento local serve à demonstração, não é banco de dados nem local adequado para tokens da Meta. Abas simultâneas não são sincronizadas; a última gravação prevalece.
 
-### Sem backend nesta etapa
+### API local conectada à interface
 
-Reduz o custo de executar e avaliar o projeto. Funções de domínio são puras, separadas dos componentes e testáveis sem rede. Uma futura camada de repositório substituirá o armazenamento local. A interface poderá continuar usando os mesmos tipos de domínio.
+A interface escolhe explicitamente entre demonstração e API local. `useWorkspace` controla carregamento, gravações e troca de origem; `api.ts` implementa o cliente HTTP e valida os contratos. A demonstração continua em localStorage, isolada do banco e sem sincronização implícita. A preferência de origem usa uma chave independente.
+
+No modo API, produtos/posts e páginas de comentários são carregados antes da exibição. PATCHs atualizam a memória somente após a confirmação do servidor. Controles de escrita ficam desabilitados durante gravações; falhas preservam o editor e seus campos. Leituras são canceladas ao trocar de origem ou desmontar a interface, com descarte de respostas atrasadas e limite de 15 segundos. O Vite faz proxy de `/api` para o backend local; o build de produção ainda exige essa configuração na hospedagem.
+
+`buildApp` monta o Fastify sem abrir uma porta, o que permite testes com injeção HTTP. `index.ts` carrega a configuração, inicia o servidor e fecha as conexões em SIGINT/SIGTERM. A API ouve apenas em `127.0.0.1` nesta etapa, sem autenticação ou CORS habilitado.
+
+### SQLite e migração inicial
+
+Três tabelas relacionais (`products`, `posts`, `comments`), índices de associação, constraints de intenção/estado e chaves estrangeiras. Queries de escrita usam parâmetros vinculados. A versão do schema fica em `PRAGMA user_version`; criação e seed usam transações. Uma versão de schema desconhecida interrompe a inicialização, sem tentar alterar ou apagar o banco.
+
+Não há seed automático. O comando explícito recusa um banco com quaisquer registros e não sobrescreve classificações. Atualizações parciais preservam campos omitidos e aceitam `false` como valor válido. Desassociação de post é representada por `productId: null`.
+
+O módulo `node:sqlite` é nativo e evita dependências de compilação no Windows; no Node 22.17 ele ainda é experimental. Este backend é um protótipo local de uma única loja. Operações são síncronas e o radar/filtro lê o conjunto em memória antes de paginar. Migrar consultas e agregações para SQL e definir concorrência será necessário ao trabalhar com volumes maiores.
+
+### Contrato HTTP
+
+Rotas versionadas em `/api/v1`, validação de entrada com Zod, campos desconhecidos rejeitados e erros padronizados. Comentários têm paginação limitada a 100 itens por página. JSON malformado, corpos acima de 16 KiB e recursos inexistentes recebem respostas controladas. Schemas inválidos vindos do banco são tratados como erro interno, não como erro do cliente.
+
+Consulte [API local](api.md). Não existe endpoint para restaurar ou apagar o banco, importar comentários ou publicar no Instagram.
 
 ### Interface
 
@@ -45,8 +64,8 @@ Três telas: visão geral, comentários e produtos/posts. Links de ranking levam
 
 ## Validação
 
-Testes cobrem contagens e evidências, reclassificação e imutabilidade, transferência de sinais entre produtos, posts sem associação, filtros combinados, recuperação de persistência, dados inválidos, armazenamento indisponível e o fluxo de classificação/reabertura da interface.
+Testes cobrem contagens e evidências, reclassificação e imutabilidade, transferência de sinais entre produtos, posts sem associação, filtros combinados, recuperação de persistência, dados inválidos, armazenamento indisponível e o fluxo de classificação/reabertura da interface. A suíte do backend verifica o contrato HTTP, validação, paginação, atualização parcial, migração, seed não destrutivo e persistência após fechar e reabrir o banco. Cada teste usa um arquivo SQLite isolado e o remove ao encerrar.
 
 ## Evolução prevista
 
-Separar as telas de `App.tsx` quando o próximo fluxo for introduzido. Adicionar backend TypeScript com autenticação, isolamento por loja e persistência em banco antes da integração com contas reais. Paginação e agregações no servidor serão necessárias para conjuntos maiores.
+Separar as telas de `App.tsx` quando o próximo fluxo for introduzido. Adicionar autenticação e isolamento por loja antes da integração com contas reais. Cadastro/importação, processamento assíncrono, controle de concorrência e implantação ficam para entregas posteriores.

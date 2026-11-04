@@ -31,18 +31,14 @@ import Refresh from '@mui/icons-material/Refresh'
 import Search from '@mui/icons-material/Search'
 import TrendingUp from '@mui/icons-material/TrendingUp'
 import {
-  associatePost,
-  classifyComment,
   filterComments,
   getDemand,
   getProductId,
   intentLabels,
   type Comment,
   type Intent,
-  type Workspace,
 } from './domain/model'
-import { createDemo } from './data/demo'
-import { loadWorkspace, saveWorkspace } from './data/storage'
+import { useWorkspace, type DataSource } from './data/useWorkspace'
 import { CommentEditor } from './components/CommentEditor'
 
 type Page = 'radar' | 'comments' | 'products'
@@ -66,19 +62,21 @@ function IntentChip({ intent }: { intent: Intent }) {
 }
 
 export default function App() {
-  const [initial] = useState(() => {
-    try {
-      return loadWorkspace(window.localStorage)
-    } catch {
-      return {
-        workspace: createDemo(),
-        warning:
-          'O armazenamento local está indisponível. As alterações durarão apenas nesta sessão.',
-      }
-    }
-  })
-  const [workspace, setWorkspace] = useState(initial.workspace)
-  const [warning, setWarning] = useState(initial.warning)
+  const {
+    workspace,
+    source,
+    changeSource,
+    loading,
+    saving,
+    error,
+    warning,
+    reload,
+    resetDemo,
+    saveComment,
+    saveAssociation,
+  } = useWorkspace()
+  const busy = loading || saving
+  const storeName = source === 'api' ? 'Loja local' : 'Ateliê Flora'
   const [page, setPage] = useState<Page>('radar')
   const [query, setQuery] = useState('')
   const [intent, setIntent] = useState<Intent | 'all'>('all')
@@ -93,19 +91,6 @@ export default function App() {
   const demandCount = demand.reduce((sum, item) => sum + item.evidence.length, 0)
   const comments = filterComments(workspace, { query, intent, productId, onlyOpen })
 
-  function update(next: Workspace, message: string) {
-    setWorkspace(next)
-    let saved = false
-    try {
-      saved = saveWorkspace(window.localStorage, next)
-    } catch {
-      /* Storage may be disabled. */
-    }
-    setWarning(
-      saved ? null : 'Alteração aplicada nesta sessão, mas não foi possível salvá-la no navegador.',
-    )
-    setNotice(message)
-  }
   function showComments(product = 'all', category: Intent | 'all' = 'all') {
     setProductId(product)
     setIntent(category)
@@ -152,8 +137,8 @@ export default function App() {
             <LocalFloristOutlined fontSize="small" />
           </Avatar>
           <div>
-            <strong>Ateliê Flora</strong>
-            <span>Loja de demonstração</span>
+            <strong>{storeName}</strong>
+            <span>{source === 'api' ? 'Banco de dados local' : 'Loja de demonstração'}</span>
           </div>
         </Paper>
         <nav aria-label="Navegação principal">
@@ -182,14 +167,28 @@ export default function App() {
       <div className="main-shell">
         <header className="topbar">
           <span className="breadcrumb">
-            Ateliê Flora <span>/</span> {nav.find((item) => item.id === page)?.label}
+            {storeName} <span>/</span> {nav.find((item) => item.id === page)?.label}
           </span>
-          <Chip
+          <TextField
+            select
             size="small"
-            variant="outlined"
-            label="Demonstração"
-            icon={<span className="status-dot" />}
-          />
+            label="Origem dos dados"
+            value={source}
+            disabled={saving}
+            onChange={(event) => {
+              changeSource(event.target.value as DataSource)
+              setEditing(null)
+              setResetOpen(false)
+              setNotice('')
+              setProductId('all')
+              setQuery('')
+              setIntent('all')
+            }}
+            sx={{ minWidth: 175 }}
+          >
+            <MenuItem value="demo">Demonstração</MenuItem>
+            <MenuItem value="api">API local</MenuItem>
+          </TextField>
           <Avatar
             sx={{ width: 32, height: 32, bgcolor: '#ece9e1', color: '#665c46', fontSize: 12 }}
           >
@@ -218,10 +217,11 @@ export default function App() {
             <Button
               variant="outlined"
               startIcon={<Refresh />}
-              onClick={() => setResetOpen(true)}
+              onClick={() => (source === 'demo' ? setResetOpen(true) : reload())}
+              disabled={busy}
               sx={{ whiteSpace: 'nowrap' }}
             >
-              Restaurar demo
+              {source === 'demo' ? 'Restaurar demo' : 'Atualizar dados'}
             </Button>
           </div>
           <Alert
@@ -234,9 +234,30 @@ export default function App() {
               '& .MuiAlert-icon': { color: '#54704e' },
             }}
           >
-            Você está explorando dados fictícios. A conexão com o Instagram será adicionada em uma
-            próxima etapa.
+            {source === 'demo'
+              ? 'Você está explorando dados fictícios salvos neste navegador. A conexão com o Instagram será adicionada em uma próxima etapa.'
+              : 'API local: as alterações são gravadas no banco de dados. A integração com o Instagram ainda está em desenvolvimento.'}
           </Alert>
+          {loading && <LinearProgress aria-label="Carregando dados da API" sx={{ mb: 3 }} />}
+          {error && !editing && (
+            <Alert
+              severity="error"
+              sx={{ mb: 3 }}
+              action={
+                <Button color="inherit" disabled={busy} onClick={reload}>
+                  Tentar novamente
+                </Button>
+              }
+            >
+              {error}
+            </Alert>
+          )}
+          {source === 'api' && !loading && !error && workspace.products.length === 0 && (
+            <Alert severity="info" sx={{ mb: 3 }}>
+              O banco ainda não tem produtos. Você pode preparar os dados da API ou explorar a
+              demonstração pelo seletor acima.
+            </Alert>
+          )}
           {warning && (
             <Alert severity="warning" sx={{ mb: 3 }}>
               {warning}
@@ -250,7 +271,7 @@ export default function App() {
                   {
                     label: 'Comentários na análise',
                     value: workspace.comments.length,
-                    note: `${workspace.posts.length} publicações de demonstração`,
+                    note: `${workspace.posts.length} publicações ${source === 'demo' ? 'de demonstração' : 'no banco local'}`,
                     icon: <ChatBubbleOutlined />,
                   },
                   {
@@ -306,6 +327,7 @@ export default function App() {
                         key={item.product.id}
                         className="demand-row"
                         onClick={() => showComments(item.product.id)}
+                        disabled={busy}
                         aria-label={`Ver comentários de ${item.product.name}`}
                       >
                         <span className="ranking-number">0{index + 1}</span>
@@ -361,6 +383,7 @@ export default function App() {
                     endIcon={<ArrowForward />}
                     sx={{ mt: 3 }}
                     onClick={() => showComments('all', 'unclassified')}
+                    disabled={busy || pending === 0}
                   >
                     Classificar comentários
                   </Button>
@@ -391,6 +414,7 @@ export default function App() {
                         className="quote-card"
                         key={comment.id}
                         onClick={() => setEditing(comment)}
+                        disabled={busy}
                       >
                         <IntentChip intent={comment.intent} />
                         <p>“{comment.text}”</p>
@@ -506,6 +530,7 @@ export default function App() {
                         size="small"
                         variant="outlined"
                         onClick={() => setEditing(comment)}
+                        disabled={busy}
                         aria-label={`Classificar comentário de ${comment.author}`}
                       >
                         Classificar
@@ -588,12 +613,11 @@ export default function App() {
                       size="small"
                       label={`Produto de ${post.title}`}
                       value={post.productId ?? ''}
-                      onChange={(event) =>
-                        update(
-                          associatePost(workspace, post.id, event.target.value || null),
-                          'Associação atualizada.',
-                        )
-                      }
+                      disabled={busy}
+                      onChange={async (event) => {
+                        if (await saveAssociation(post.id, event.target.value || null))
+                          setNotice('Associação atualizada.')
+                      }}
                       sx={{ minWidth: { sm: 240 }, width: { xs: '100%', sm: 260 } }}
                     >
                       <MenuItem value="">Não associado</MenuItem>
@@ -612,7 +636,11 @@ export default function App() {
             <span>
               tem desse? <span className="footer-separator">/</span> Escutar também é estratégia.
             </span>
-            <span>Dados fictícios · Salvos neste navegador</span>
+            <span>
+              {source === 'demo'
+                ? 'Dados fictícios · Salvos neste navegador'
+                : 'API local · Banco SQLite'}
+            </span>
           </footer>
         </main>
       </div>
@@ -621,12 +649,13 @@ export default function App() {
           key={editing.id}
           comment={editing}
           onClose={() => setEditing(null)}
-          onSave={(category, resolved) => {
-            update(
-              classifyComment(workspace, editing.id, category, resolved),
-              'Classificação salva. O radar foi atualizado.',
-            )
-            setEditing(null)
+          saving={saving}
+          error={error}
+          onSave={async (category, resolved) => {
+            if (await saveComment(editing.id, category, resolved)) {
+              setNotice('Classificação salva. O radar foi atualizado.')
+              setEditing(null)
+            }
           }}
         />
       )}
@@ -640,7 +669,8 @@ export default function App() {
           <Button
             variant="contained"
             onClick={() => {
-              update(createDemo(), 'Demonstração restaurada.')
+              resetDemo()
+              setNotice('Demonstração restaurada.')
               setResetOpen(false)
               setEditing(null)
             }}

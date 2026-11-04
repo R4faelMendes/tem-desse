@@ -20,11 +20,15 @@ Aceite: classificar um comentário altera o ranking, permite consultar a evidên
 
 Aceite: executar o fluxo com um catálogo próprio, sem depender de uma conta da Meta.
 
-## 3. Backend e contas de lojas
+## 3. Backend e contas de lojas — em andamento
 
-- [ ] API TypeScript e banco relacional com migrações.
+- [x] Primeira fatia da API TypeScript e SQLite com migração inicial.
+- [x] Leitura de produtos/posts, classificação, associação e radar com evidências.
+- [x] Validação, paginação de comentários e testes de integração/persistência.
 - [ ] Autenticação e isolamento de dados por loja.
-- [ ] Contrato de API e repositório de dados para o frontend.
+- [x] Contrato inicial da API documentado.
+- [x] Repositório HTTP e seletor para conectar o frontend à API local.
+- [x] Estados de carregamento/erro e preservação da edição em falhas de gravação.
 - [ ] Paginação e processamento seguro de reimportações.
 
 Aceite: duas lojas autenticadas não conseguem consultar ou alterar dados uma da outra.
